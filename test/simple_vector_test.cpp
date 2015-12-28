@@ -34,6 +34,7 @@ void CheckVector(const size_t expectedSize, Vector& vec)
     const Vector& cvec = vec;
 
     CHECK(expectedSize == vec.size());
+    CHECK(expectedSize <= vec.capacity());
 
     if (expectedSize == 0)
     {
@@ -202,6 +203,17 @@ void TestMoveCtorWithAllocator()
     }
 }
 
+void TestCtorWithInitializerList()
+{
+    std::vector<int> vec({0, 1, 2, 3, 4, 5});
+    CheckVector(6, vec);
+
+    for (size_t pos = 0; pos != 10; ++pos)
+    {
+        CheckValueAtPosition(static_cast<int>(pos), vec, pos);
+    }
+}
+
 
 void TestVectorCtor()
 {
@@ -214,6 +226,7 @@ void TestVectorCtor()
     TestCopyCtorWithAllocator();
     TestMoveCtor();
     TestMoveCtorWithAllocator();
+    TestCtorWithInitializerList();
 }
 
 
@@ -282,12 +295,32 @@ void TestResize()
     TestResizeWithCountAndValue();
 }
 
+void TestReserve()
+{
+    std::vector<int> vec;
+
+    vec.reserve(10);
+    CheckVector(0, vec);
+    CHECK(10 == vec.capacity());
+
+    vec.reserve(9);
+    CheckVector(0, vec);
+    CHECK(10 == vec.capacity()); // capacity does not change
+}
+
+void TestErase()
+{
+    std::vector<int> vec;
+}
+
 int main()
 {
     try
     {
         TestVectorCtor();
         TestResize();
+        TestReserve();
+        TestErase();
     }
     catch(...)
     {

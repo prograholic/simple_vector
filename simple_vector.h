@@ -4,6 +4,10 @@
 #include <allocator.h>
 #include <initializer_list.h>
 #include <reverse_iterator.h>
+#include <uninitialized.h>
+#include <exception.h>
+#include <algorithm.h>
+#include <numeric_limits.h>
 
 namespace std
 {
@@ -88,6 +92,12 @@ public:
     {
     }
 
+    ~vector()
+    {
+        erase(m_first, m_last);
+        throw "not implemented";
+    }
+
 
     //get_allocator method
     allocator_type get_allocator() const
@@ -168,6 +178,15 @@ public:
         return m_last - m_first;
     }
 
+    size_type capacity() const
+    {
+        return m_endOfCapacity - m_first;
+    }
+
+    size_type max_size() const
+    {
+        return std::numeric_limits<size_type>::max();
+    }
 
     //empty method
     bool empty() const
@@ -179,12 +198,62 @@ public:
     // resize methods
     void resize(size_type count)
     {
-        hohoho
+        if (count > size())
+        {
+            reserve_for_future(count);
+            uninitialized_construct_with_allocator(m_last, m_last + count, *this);
+            m_last += count;
+        }
+        else if (count < size())
+        {
+            erase(begin() + count, end());
+        }
     }
 
     void resize(size_type count, const Type& value)
     {
-        hehehe
+        if (count > size())
+        {
+            reserve_for_future(count);
+            uninitialized_construct_with_allocator(m_last, m_last + count, *this, value);
+            m_last += count;
+        }
+        else if (count < size())
+        {
+            erase(begin() + count, end());
+        }
+    }
+
+
+    // reserve method
+    void reserve(size_type newCapacity)
+    {
+        if (newCapacity > max_size())
+        {
+            throw std::length_error("");
+        }
+
+        if (newCapacity > capacity())
+        {
+            throw "not implemented";
+        }
+    }
+
+    //erase methods
+    iterator erase(const_iterator pos)
+    {
+        return erase(pos, pos + 1);
+    }
+
+    iterator erase(const_iterator first, const_iterator last)
+    {
+        throw "not implemented";
+        iterator newLast = rotate(cast_from_const(first), cast_from_const(last), m_last);
+
+        destroy_range(newLast, m_last, *this);
+        m_last = newLast;
+
+        //return m_first + ()
     }
 
 private:
@@ -198,6 +267,18 @@ private:
         vec.m_first = 0;
         vec.m_last = 0;
         vec.m_endOfCapacity = 0;
+    }
+
+    void reserve_for_future(size_type desiredCapacity)
+    {
+        size_type exactCapacity = static_cast<size_type>(desiredCapacity * 1.5);
+        exactCapacity = (exactCapacity > desiredCapacity) ? exactCapacity : (desiredCapacity + 1);
+        reserve(exactCapacity);
+    }
+
+    static iterator cast_from_const(const_iterator pos)
+    {
+        return const_cast<iterator>(pos);
     }
 };
 
