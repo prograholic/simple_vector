@@ -77,3 +77,7 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+
+# Windows solution
+simple_vector_sln
