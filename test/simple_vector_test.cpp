@@ -1,4 +1,4 @@
-#include <simple_vector.h>
+#include <vector.h>
 
 #include <stdio.h>
 
@@ -46,7 +46,7 @@ void CheckVector(const size_t expectedSize, Vector& vec)
         CHECK(cvec.rbegin() == cvec.rend());
         CHECK(vec.crbegin() == vec.crend());
 
-        CHECK(false == vec.empty()); //true
+        CHECK(true == vec.empty());
     }
     else
     {
@@ -231,6 +231,210 @@ void TestVectorCtor()
 
 
 
+void TestCopyAssignment()
+{
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        std::vector<int> vec2;
+        vec2 = vec;
+        CheckVector(6, vec2);
+        for (size_t pos = 0; pos != 6; ++pos)
+        {
+            CheckValueAtPosition(static_cast<int>(pos), vec2, pos);
+            CheckValueAtPosition(static_cast<int>(pos), vec, pos);
+        }
+    }
+
+    {
+        std::vector<int> vec;
+
+        std::vector<int> vec2;
+        vec2 = vec;
+        CheckVector(0, vec2);
+    }
+
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        std::vector<int> vec2({6, 7, 8, 9});
+        vec2 = vec;
+        CheckVector(6, vec2);
+        for (size_t pos = 0; pos != 6; ++pos)
+        {
+            CheckValueAtPosition(static_cast<int>(pos), vec2, pos);
+            CheckValueAtPosition(static_cast<int>(pos), vec, pos);
+        }
+    }
+}
+
+void TestMoveAssignment()
+{
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        std::vector<int> vec2;
+        vec2 = std::move(vec);
+        CheckVector(6, vec2);
+        CheckVector(0, vec);
+        for (size_t pos = 0; pos != 6; ++pos)
+        {
+            CheckValueAtPosition(static_cast<int>(pos), vec, pos);
+        }
+    }
+
+    {
+        std::vector<int> vec;
+
+        std::vector<int> vec2;
+        vec2 = std::move(vec);
+        CheckVector(0, vec2);
+        CheckVector(0, vec);
+    }
+
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        std::vector<int> vec2({6, 7, 8, 9});
+        vec2 = std::move(vec);
+        CheckVector(6, vec2);
+        CheckVector(0, vec);
+        for (size_t pos = 0; pos != 6; ++pos)
+        {
+            CheckValueAtPosition(static_cast<int>(pos), vec2, pos);
+        }
+    }
+}
+
+void TestInitializerListAssignment()
+{
+    {
+        std::vector<int> vec;
+        vec = {0, 1, 2, 3, 4, 5};
+        CheckVector(6, vec);
+        for (size_t pos = 0; pos != 6; ++pos)
+        {
+            CheckValueAtPosition(static_cast<int>(pos), vec, pos);
+        }
+    }
+}
+
+
+void TestAssignmentOperator()
+{
+    TestCopyAssignment();
+    TestMoveAssignment();
+    TestInitializerListAssignment();
+}
+
+
+void TestAssignWithCountAndValue()
+{
+    {
+        std::vector<int> vec;
+
+        vec.assign(5, 42);
+        CheckVector(5, vec);
+        for (size_t pos = 0; pos != 5; ++pos)
+        {
+            CheckValueAtPosition(42, vec, pos);
+        }
+    }
+
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        vec.assign(0, 42);
+        CheckVector(0, vec);
+    }
+
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        vec.assign(5, 42);
+        CheckVector(5, vec);
+        for (size_t pos = 0; pos != 5; ++pos)
+        {
+            CheckValueAtPosition(42, vec, pos);
+        }
+    }
+}
+
+void TestAssignWithRangeOfIterators()
+{
+    {
+        std::vector<int> vec;
+
+        int buf [] = {0, 1, 2, 3, 4, 5};
+        vec.assign(buf, buf + 6);
+        CheckVector(6, vec);
+        for (size_t pos = 0; pos != 6; ++pos)
+        {
+            CheckValueAtPosition(pos, vec, pos);
+        }
+    }
+
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        int buf [] = {0, 1, 2, 3, 4, 5};
+        vec.assign(buf, buf);
+        CheckVector(0, vec);
+    }
+
+    {
+        std::vector<int> vec({6, 7, 8, 9});
+
+        int buf [] = {0, 1, 2, 3, 4, 5};
+        vec.assign(buf, buf + 6);
+        CheckVector(6, vec);
+        for (size_t pos = 0; pos != 6; ++pos)
+        {
+            CheckValueAtPosition(pos, vec, pos);
+        }
+    }
+}
+
+void TestAssignWithInitializerList()
+{
+    {
+        std::vector<int> vec;
+
+        vec.assign({0, 1, 2, 3, 4, 5});
+        CheckVector(6, vec);
+        for (size_t pos = 0; pos != 6; ++pos)
+        {
+            CheckValueAtPosition(pos, vec, pos);
+        }
+    }
+
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        vec.assign({});
+        CheckVector(0, vec);
+    }
+
+    {
+        std::vector<int> vec({6, 7, 8, 9});
+
+        vec.assign({0, 1, 2, 3, 4, 5});
+        CheckVector(6, vec);
+        for (size_t pos = 0; pos != 6; ++pos)
+        {
+            CheckValueAtPosition(pos, vec, pos);
+        }
+    }
+}
+
+
+void TestAssignMethod()
+{
+    TestAssignWithCountAndValue();
+    TestAssignWithRangeOfIterators();
+    TestAssignWithInitializerList();
+}
+
 
 void TestResizeWithCount()
 {
@@ -308,9 +512,190 @@ void TestReserve()
     CHECK(10 == vec.capacity()); // capacity does not change
 }
 
+void TestEraseOneElement()
+{
+    std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+    auto res = vec.erase(vec.begin());
+    CheckVector(5, vec);
+    CHECK(1 == *res);
+    for (size_t i = 0; i != 5; ++i)
+    {
+        CheckValueAtPosition(i + 1, vec, i);
+    }
+
+
+    res = vec.erase(vec.end() - 1);
+    CheckVector(4, vec);
+    CHECK(vec.end() == res);
+    for (size_t i = 0; i != 4; ++i)
+    {
+        CheckValueAtPosition(i + 1, vec, i);
+    }
+
+
+    res = vec.erase(vec.end() - 2);
+    CheckVector(3, vec);
+    CHECK(4 == *res);
+    CheckValueAtPosition(1, vec, 0);
+    CheckValueAtPosition(2, vec, 1);
+    CheckValueAtPosition(4, vec, 2);
+}
+
+
+
+void TestEraseRange()
+{
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        auto res = vec.erase(vec.begin(), vec.end());
+        CheckVector(0, vec);
+        CHECK(vec.end() == res);
+    }
+
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        auto res = vec.erase(vec.begin(), vec.begin());
+        CheckVector(6, vec);
+        CHECK(vec.begin() == res);
+        for (size_t i = 0; i != 6; ++i)
+        {
+            CheckValueAtPosition(i, vec, i);
+        }
+    }
+
+
+    {
+        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+
+        auto res = vec.erase(vec.begin() + 1, vec.end() - 1);
+        CheckVector(2, vec);
+        CHECK(5 == *res);
+        CheckValueAtPosition(0, vec, 0);
+        CheckValueAtPosition(5, vec, 1);
+    }
+}
+
+
 void TestErase()
 {
+    TestEraseOneElement();
+    TestEraseRange();
+}
+
+
+
+void TestInsertAtPosWithCref()
+{
     std::vector<int> vec;
+
+    auto res = vec.insert(vec.begin(), 10);
+    CheckVector(1, vec);
+
+    CheckValueAtPosition(10, vec, 0);
+    CHECK(10 == *res);
+
+    res = vec.insert(vec.end(), 20);
+    CheckVector(2, vec);
+
+    CheckValueAtPosition(10, vec, 0);
+    CheckValueAtPosition(20, vec, 1);
+    CHECK(20 == *res);
+}
+
+
+void TestInsertAtPosWithRvalueRef()
+{
+    std::vector<int> vec;
+
+    auto res = vec.insert(vec.begin(), std::move(10));
+    CheckVector(1, vec);
+
+    CheckValueAtPosition(10, vec, 0);
+    CHECK(10 == *res);
+
+    res = vec.insert(vec.end(), std::move(20));
+    CheckVector(2, vec);
+
+    CheckValueAtPosition(10, vec, 0);
+    CheckValueAtPosition(20, vec, 1);
+    CHECK(20 == *res);
+}
+
+void TestInsertAtPosWithCrefAndCount()
+{
+    std::vector<int> vec;
+
+    auto res = vec.insert(vec.begin(), 5, 10);
+    CheckVector(5, vec);
+    for (size_t i = 0; i != 5; ++i)
+    {
+        CheckValueAtPosition(10, vec, i);
+    }
+    CHECK(10 == *res);
+
+    res = vec.insert(vec.end(), 0, 20);
+    CheckVector(5, vec);
+    for (size_t i = 0; i != 5; ++i)
+    {
+        CheckValueAtPosition(10, vec, i);
+    }
+    CHECK(vec.end() == res);
+}
+
+void TestInsertAtPosWithRange()
+{
+    std::vector<int> vec;
+
+    {
+        int buf [] = {0, 1, 2, 3, 4, 5};
+        auto res = vec.insert(vec.begin(), buf, buf + 6);
+        CheckVector(6, vec);
+        for (size_t i = 0; i != 6; ++i)
+        {
+            CheckValueAtPosition(i, vec, i);
+        }
+        CHECK(vec.begin() == res);
+    }
+
+    {
+        int buf [] = {0, 1, 2, 3, 4, 5};
+        auto res = vec.insert(vec.begin() + 3, buf, buf);
+        CheckVector(6, vec);
+        for (size_t i = 0; i != 6; ++i)
+        {
+            CheckValueAtPosition(i, vec, i);
+        }
+        CHECK((vec.begin() + 3) == res);
+    }
+
+    {
+        int buf [] = {6, 7, 8, 9};
+        auto res = vec.insert(vec.begin() + 3, buf, buf + 4);
+        CheckVector(10, vec);
+        CheckValueAtPosition(0, vec, 0);
+        CheckValueAtPosition(1, vec, 1);
+        CheckValueAtPosition(2, vec, 2);
+        CheckValueAtPosition(3, vec, 3);
+        CheckValueAtPosition(6, vec, 4);
+        CheckValueAtPosition(7, vec, 5);
+        CheckValueAtPosition(8, vec, 6);
+        CheckValueAtPosition(9, vec, 7);
+        CheckValueAtPosition(4, vec, 8);
+        CheckValueAtPosition(5, vec, 9);
+
+        CHECK((vec.begin() + 3) == res);
+    }
+}
+
+
+void TestInsert()
+{
+    TestInsertAtPosWithCref();
+    TestInsertAtPosWithRvalueRef();
+    TestInsertAtPosWithRange();
 }
 
 int main()
@@ -318,9 +703,12 @@ int main()
     try
     {
         TestVectorCtor();
+        TestAssignmentOperator();
+        TestAssignMethod();
         TestResize();
         TestReserve();
         TestErase();
+        TestInsert();
     }
     catch(...)
     {

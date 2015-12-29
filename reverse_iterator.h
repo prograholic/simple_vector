@@ -1,12 +1,20 @@
 #pragma once
 
 
+#include <iterator_traits.h>
+
 namespace std
 {
 
 template <typename Iterator>
 struct reverse_iterator
 {
+    typedef typename iterator_traits<Iterator>::iterator_category iterator_category;
+    typedef typename iterator_traits<Iterator>::value_type value_type;
+    typedef typename iterator_traits<Iterator>::difference_type difference_type;
+    typedef typename iterator_traits<Iterator>::pointer pointer;
+    typedef typename iterator_traits<Iterator>::reference reference;
+
     reverse_iterator()
         : m_current()
     {

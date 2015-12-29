@@ -40,15 +40,36 @@ ForwardIterator uninitialized_copy_with_allocator(InputIterator first, InputIter
 {
     typedef typename std::iterator_traits<InputIterator>::value_type input_value_type;
     typedef typename std::iterator_traits<ForwardIterator>::value_type value_type;
-    ForwardIterator current = first;
+    ForwardIterator current = dest;
     try
     {
-        for (; current != last; ++current, ++first)
+        for (; first != last; ++current, ++first)
         {
-            alloc.construct(std::addressof(*dest), std::forward<input_value_type>(*first));
+            alloc.construct(std::addressof(*current), *first);
         }
 
-        return dest;
+        return current;
+    }
+    catch (...)
+    {
+        destroy_range(dest, current, alloc);
+        throw;
+    }
+}
+
+template<typename Type, typename Size, typename ForwardIterator, typename Allocator>
+ForwardIterator uninitialized_copy_with_allocator_n(const Type& value, Size n, ForwardIterator dest, Allocator& alloc) // note semantics differs from uninitialized_copy_n
+{
+    typedef typename std::iterator_traits<ForwardIterator>::value_type value_type;
+    ForwardIterator current = dest;
+    try
+    {
+        for (; n > 0; ++current, --n)
+        {
+            alloc.construct(std::addressof(*current), value);
+        }
+
+        return current;
     }
     catch (...)
     {

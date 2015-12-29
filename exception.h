@@ -54,4 +54,19 @@ public:
     }
 };
 
+class out_of_range: public logic_error
+{
+public:
+    template <typename Type>
+    out_of_range(const Type& value)
+        : logic_error(value)
+    {
+    }
+
+    virtual const char* what() const
+    {
+        return "out of range";
+    }
+};
+
 }

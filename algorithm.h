@@ -43,4 +43,22 @@ ForwardIterator rotate(ForwardIterator first, ForwardIterator n_first, ForwardIt
     return first;
 }
 
+template <typename Type>
+const Type& max(const Type& a, const Type& b)
+{
+    return (a < b) ? b : a;
+}
+
+template <typename Type>
+const Type& min(const Type& a, const Type& b)
+{
+    return (a < b) ? a : b;
+}
+
+template <typename ForwardIterator>
+typename iterator_traits<ForwardIterator>::difference_type distance(ForwardIterator first, ForwardIterator last)
+{
+    return last - first; // TODO: add support for ForwardIterator
+}
+
 }
