@@ -6,6 +6,80 @@
 #define STR2(x) STR(x)
 #define CHECK(val) do { if (!(val)) throw STR(val) " at " STR2(__FILE__) "(" STR2(__LINE__) ")";} while(0)
 
+
+
+struct ObjectWithGlobalRefCount
+{
+    ObjectWithGlobalRefCount()
+        : m_value()
+    {
+        ++objectCount;
+    }
+
+    ObjectWithGlobalRefCount(int value)
+        : m_value(value)
+    {
+        ++objectCount;
+    }
+
+    ObjectWithGlobalRefCount(const ObjectWithGlobalRefCount& other)
+        : m_value(other.m_value)
+    {
+        ++objectCount;
+    }
+
+    ObjectWithGlobalRefCount(ObjectWithGlobalRefCount&& other)
+        : m_value(std::move(other.m_value))
+    {
+        ++objectCount;
+    }
+
+    ~ObjectWithGlobalRefCount()
+    {
+        --objectCount;
+    }
+
+    ObjectWithGlobalRefCount& operator=(const ObjectWithGlobalRefCount& other)
+    {
+        if (&other != this)
+        {
+            m_value = other.m_value;
+        }
+
+        return *this;
+    }
+
+    ObjectWithGlobalRefCount& operator=(ObjectWithGlobalRefCount&& other)
+    {
+        if (&other != this)
+        {
+            m_value = std::move(other.m_value);
+        }
+
+        return *this;
+    }
+
+    int m_value;
+
+    static size_t objectCount;
+};
+
+inline bool operator==(const ObjectWithGlobalRefCount& left, int right)
+{
+    return left.m_value == right;
+}
+
+inline bool operator==(int left, const ObjectWithGlobalRefCount& right)
+{
+    return left == right.m_value;
+}
+
+size_t ObjectWithGlobalRefCount::objectCount = 0;
+
+
+#define RUN_TEST(test) do {printf("running test %s...", STR(test)); test; CHECK((0 == ObjectWithGlobalRefCount::objectCount) && STR(test) " failed"); printf(" done\n");} while(0)
+#define RUN_TEST_SUITE(test) do {printf("running test suite %s...\n", STR(test)); test; printf("done\n\n");} while(0)
+
 int ProcessException()
 {
     try
@@ -86,22 +160,28 @@ void CheckValueAtPosition(const Type& expectedValue, Vector& vec, size_t pos)
     CHECK(expectedValue == *(vec.cbegin() + pos));
 }
 
+
+
+
+template <typename Type>
 void TestDefaultCtor()
 {
-    std::vector<int> vec;
+    std::vector<Type> vec;
     CheckVector(0, vec);
 }
 
+template <typename Type>
 void TestCtorWithAllocator()
 {
-    std::allocator<int> a;
-    std::vector<int> vec(a);
+    std::allocator<Type> a;
+    std::vector<Type> vec(a);
     CheckVector(0, vec);
 }
 
+template <typename Type>
 void TestCtorWithValueAndCount()
 {
-    std::vector<int> vec(10, 42);
+    std::vector<Type> vec(10, 42);
     CheckVector(10, vec);
 
     for (size_t pos = 0; pos != 10; ++pos)
@@ -110,10 +190,10 @@ void TestCtorWithValueAndCount()
     }
 }
 
-
+template <typename Type>
 void TestCtorWithCount()
 {
-    std::vector<int> vec(10);
+    std::vector<Type> vec(10);
     CheckVector(10, vec);
 
     for (size_t pos = 0; pos != 10; ++pos)
@@ -122,121 +202,126 @@ void TestCtorWithCount()
     }
 }
 
+template <typename Type>
 void TestCtorWithInputIterator()
 {
     int buf[] = {0, 1, 2, 3, 4, 5};
-    std::vector<int> vec(buf, buf + 6);
+    std::vector<Type> vec(buf, buf + 6);
     CheckVector(6, vec);
 
-    for (size_t pos = 0; pos != 10; ++pos)
+    for (size_t pos = 0; pos != 6; ++pos)
     {
         CheckValueAtPosition(static_cast<int>(pos), vec, pos);
     }
 }
 
+template <typename Type>
 void TestCopyCtor()
 {
     int buf [] = {0, 1, 2, 3, 4, 5};
-    std::vector<int> input(buf, buf + 6);
+    std::vector<Type> input(buf, buf + 6);
     CheckVector(6, input);
 
-    std::vector<int> vec(input);
+    std::vector<Type> vec(input);
     CheckVector(6, vec);
     CheckVector(6, input);
 
-    for (size_t pos = 0; pos != 10; ++pos)
+    for (size_t pos = 0; pos != 6; ++pos)
     {
         CheckValueAtPosition(static_cast<int>(pos), vec, pos);
     }
 }
 
+template <typename Type>
 void TestCopyCtorWithAllocator()
 {
     int buf [] = {0, 1, 2, 3, 4, 5};
-    std::vector<int> input(buf, buf + 6);
+    std::vector<Type> input(buf, buf + 6);
     CheckVector(6, input);
 
-    std::allocator<int> a;
+    std::allocator<Type> a;
 
-    std::vector<int> vec(input, a);
+    std::vector<Type> vec(input, a);
     CheckVector(6, vec);
     CheckVector(6, input);
 
-    for (size_t pos = 0; pos != 10; ++pos)
+    for (size_t pos = 0; pos != 6; ++pos)
     {
         CheckValueAtPosition(static_cast<int>(pos), vec, pos);
     }
 }
 
-
+template <typename Type>
 void TestMoveCtor()
 {
     int buf [] = {0, 1, 2, 3, 4, 5};
-    std::vector<int> input(buf, buf + 6);
+    std::vector<Type> input(buf, buf + 6);
     CheckVector(6, input);
 
-    std::vector<int> vec(std::move(input));
+    std::vector<Type> vec(std::move(input));
     CheckVector(6, vec);
     CheckVector(0, input);
 
-    for (size_t pos = 0; pos != 10; ++pos)
+    for (size_t pos = 0; pos != 6; ++pos)
     {
         CheckValueAtPosition(static_cast<int>(pos), vec, pos);
     }
 }
 
+template <typename Type>
 void TestMoveCtorWithAllocator()
 {
     int buf [] = {0, 1, 2, 3, 4, 5};
-    std::vector<int> input(buf, buf + 6);
+    std::vector<Type> input(buf, buf + 6);
     CheckVector(6, input);
 
-    std::allocator<int> a;
+    std::allocator<Type> a;
 
-    std::vector<int> vec(std::move(input), a);
+    std::vector<Type> vec(std::move(input), a);
     CheckVector(6, vec);
     CheckVector(0, input);
 
-    for (size_t pos = 0; pos != 10; ++pos)
+    for (size_t pos = 0; pos != 6; ++pos)
     {
         CheckValueAtPosition(static_cast<int>(pos), vec, pos);
     }
 }
 
+template <typename Type>
 void TestCtorWithInitializerList()
 {
-    std::vector<int> vec({0, 1, 2, 3, 4, 5});
+    std::vector<Type> vec({0, 1, 2, 3, 4, 5});
     CheckVector(6, vec);
 
-    for (size_t pos = 0; pos != 10; ++pos)
+    for (size_t pos = 0; pos != 6; ++pos)
     {
         CheckValueAtPosition(static_cast<int>(pos), vec, pos);
     }
 }
 
-
+template <typename Type>
 void TestVectorCtor()
 {
-    TestDefaultCtor();
-    TestCtorWithAllocator();
-    TestCtorWithValueAndCount();
-    TestCtorWithCount();
-    TestCtorWithInputIterator();
-    TestCopyCtor();
-    TestCopyCtorWithAllocator();
-    TestMoveCtor();
-    TestMoveCtorWithAllocator();
-    TestCtorWithInitializerList();
+    RUN_TEST(TestDefaultCtor<Type>());
+    RUN_TEST(TestCtorWithAllocator<Type>());
+    RUN_TEST(TestCtorWithValueAndCount<Type>());
+    RUN_TEST(TestCtorWithCount<Type>());
+    RUN_TEST(TestCtorWithInputIterator<Type>());
+    RUN_TEST(TestCopyCtor<Type>());
+    RUN_TEST(TestCopyCtorWithAllocator<Type>());
+    RUN_TEST(TestMoveCtor<Type>());
+    RUN_TEST(TestMoveCtorWithAllocator<Type>());
+    RUN_TEST(TestCtorWithInitializerList<Type>());
 }
 
 
-
+template <typename Type>
 void TestCopyAssignment()
 {
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
-        std::vector<int> vec2;
+        std::vector<Type> vec2;
         vec2 = vec;
         CheckVector(6, vec2);
         for (size_t pos = 0; pos != 6; ++pos)
@@ -247,17 +332,17 @@ void TestCopyAssignment()
     }
 
     {
-        std::vector<int> vec;
+        std::vector<Type> vec;
 
-        std::vector<int> vec2;
+        std::vector<Type> vec2;
         vec2 = vec;
         CheckVector(0, vec2);
     }
 
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
-        std::vector<int> vec2({6, 7, 8, 9});
+        std::vector<Type> vec2({6, 7, 8, 9});
         vec2 = vec;
         CheckVector(6, vec2);
         for (size_t pos = 0; pos != 6; ++pos)
@@ -268,34 +353,35 @@ void TestCopyAssignment()
     }
 }
 
+template <typename Type>
 void TestMoveAssignment()
 {
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
-        std::vector<int> vec2;
+        std::vector<Type> vec2;
         vec2 = std::move(vec);
         CheckVector(6, vec2);
         CheckVector(0, vec);
         for (size_t pos = 0; pos != 6; ++pos)
         {
-            CheckValueAtPosition(static_cast<int>(pos), vec, pos);
+            CheckValueAtPosition(static_cast<int>(pos), vec2, pos);
         }
     }
 
     {
-        std::vector<int> vec;
+        std::vector<Type> vec;
 
-        std::vector<int> vec2;
+        std::vector<Type> vec2;
         vec2 = std::move(vec);
         CheckVector(0, vec2);
         CheckVector(0, vec);
     }
 
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
-        std::vector<int> vec2({6, 7, 8, 9});
+        std::vector<Type> vec2({6, 7, 8, 9});
         vec2 = std::move(vec);
         CheckVector(6, vec2);
         CheckVector(0, vec);
@@ -306,10 +392,11 @@ void TestMoveAssignment()
     }
 }
 
+template <typename Type>
 void TestInitializerListAssignment()
 {
     {
-        std::vector<int> vec;
+        std::vector<Type> vec;
         vec = {0, 1, 2, 3, 4, 5};
         CheckVector(6, vec);
         for (size_t pos = 0; pos != 6; ++pos)
@@ -320,18 +407,20 @@ void TestInitializerListAssignment()
 }
 
 
+template <typename Type>
 void TestAssignmentOperator()
 {
-    TestCopyAssignment();
-    TestMoveAssignment();
-    TestInitializerListAssignment();
+    RUN_TEST(TestCopyAssignment<Type>());
+    RUN_TEST(TestMoveAssignment<Type>());
+    RUN_TEST(TestInitializerListAssignment<Type>());
 }
 
 
+template <typename Type>
 void TestAssignWithCountAndValue()
 {
     {
-        std::vector<int> vec;
+        std::vector<Type> vec;
 
         vec.assign(5, 42);
         CheckVector(5, vec);
@@ -342,14 +431,14 @@ void TestAssignWithCountAndValue()
     }
 
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
         vec.assign(0, 42);
         CheckVector(0, vec);
     }
 
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
         vec.assign(5, 42);
         CheckVector(5, vec);
@@ -360,10 +449,11 @@ void TestAssignWithCountAndValue()
     }
 }
 
+template <typename Type>
 void TestAssignWithRangeOfIterators()
 {
     {
-        std::vector<int> vec;
+        std::vector<Type> vec;
 
         int buf [] = {0, 1, 2, 3, 4, 5};
         vec.assign(buf, buf + 6);
@@ -375,7 +465,7 @@ void TestAssignWithRangeOfIterators()
     }
 
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
         int buf [] = {0, 1, 2, 3, 4, 5};
         vec.assign(buf, buf);
@@ -383,7 +473,7 @@ void TestAssignWithRangeOfIterators()
     }
 
     {
-        std::vector<int> vec({6, 7, 8, 9});
+        std::vector<Type> vec({6, 7, 8, 9});
 
         int buf [] = {0, 1, 2, 3, 4, 5};
         vec.assign(buf, buf + 6);
@@ -395,10 +485,11 @@ void TestAssignWithRangeOfIterators()
     }
 }
 
+template <typename Type>
 void TestAssignWithInitializerList()
 {
     {
-        std::vector<int> vec;
+        std::vector<Type> vec;
 
         vec.assign({0, 1, 2, 3, 4, 5});
         CheckVector(6, vec);
@@ -409,14 +500,14 @@ void TestAssignWithInitializerList()
     }
 
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
         vec.assign({});
         CheckVector(0, vec);
     }
 
     {
-        std::vector<int> vec({6, 7, 8, 9});
+        std::vector<Type> vec({6, 7, 8, 9});
 
         vec.assign({0, 1, 2, 3, 4, 5});
         CheckVector(6, vec);
@@ -428,17 +519,19 @@ void TestAssignWithInitializerList()
 }
 
 
+template <typename Type>
 void TestAssignMethod()
 {
-    TestAssignWithCountAndValue();
-    TestAssignWithRangeOfIterators();
-    TestAssignWithInitializerList();
+    RUN_TEST(TestAssignWithCountAndValue<Type>());
+    RUN_TEST(TestAssignWithRangeOfIterators<Type>());
+    RUN_TEST(TestAssignWithInitializerList<Type>());
 }
 
 
+template <typename Type>
 void TestResizeWithCount()
 {
-    std::vector<int> vec;
+    std::vector<Type> vec;
 
     vec.resize(10);
     CheckVector(10, vec);
@@ -448,24 +541,25 @@ void TestResizeWithCount()
     }
 
     vec.resize(20);
-    CheckVector(10, vec);
+    CheckVector(20, vec);
     for (size_t pos = 0; pos != 20; ++pos)
     {
         CheckValueAtPosition(0, vec, pos);
     }
 
     vec.resize(5);
-    CheckVector(10, vec);
-    for (size_t pos = 0; pos != 20; ++pos)
+    CheckVector(5, vec);
+    for (size_t pos = 0; pos != 5; ++pos)
     {
         CheckValueAtPosition(0, vec, pos);
     }
 }
 
 
+template <typename Type>
 void TestResizeWithCountAndValue()
 {
-    std::vector<int> vec;
+    std::vector<Type> vec;
 
     vec.resize(10, 42);
     CheckVector(10, vec);
@@ -493,15 +587,17 @@ void TestResizeWithCountAndValue()
     }
 }
 
+template <typename Type>
 void TestResize()
 {
-    TestResizeWithCount();
-    TestResizeWithCountAndValue();
+    RUN_TEST(TestResizeWithCount<Type>());
+    RUN_TEST(TestResizeWithCountAndValue<Type>());
 }
 
+template <typename Type>
 void TestReserve()
 {
-    std::vector<int> vec;
+    std::vector<Type> vec;
 
     vec.reserve(10);
     CheckVector(0, vec);
@@ -512,9 +608,10 @@ void TestReserve()
     CHECK(10 == vec.capacity()); // capacity does not change
 }
 
+template <typename Type>
 void TestEraseOneElement()
 {
-    std::vector<int> vec({0, 1, 2, 3, 4, 5});
+    std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
     auto res = vec.erase(vec.begin());
     CheckVector(5, vec);
@@ -544,10 +641,11 @@ void TestEraseOneElement()
 
 
 
+template <typename Type>
 void TestEraseRange()
 {
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
         auto res = vec.erase(vec.begin(), vec.end());
         CheckVector(0, vec);
@@ -555,7 +653,7 @@ void TestEraseRange()
     }
 
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
         auto res = vec.erase(vec.begin(), vec.begin());
         CheckVector(6, vec);
@@ -568,7 +666,7 @@ void TestEraseRange()
 
 
     {
-        std::vector<int> vec({0, 1, 2, 3, 4, 5});
+        std::vector<Type> vec({0, 1, 2, 3, 4, 5});
 
         auto res = vec.erase(vec.begin() + 1, vec.end() - 1);
         CheckVector(2, vec);
@@ -579,25 +677,29 @@ void TestEraseRange()
 }
 
 
+template <typename Type>
 void TestErase()
 {
-    TestEraseOneElement();
-    TestEraseRange();
+    RUN_TEST(TestEraseOneElement<Type>());
+    RUN_TEST(TestEraseRange<Type>());
 }
 
 
 
+template <typename Type>
 void TestInsertAtPosWithCref()
 {
-    std::vector<int> vec;
+    std::vector<Type> vec;
 
-    auto res = vec.insert(vec.begin(), 10);
+    const Type v10 = 10;
+    auto res = vec.insert(vec.begin(), v10);
     CheckVector(1, vec);
 
     CheckValueAtPosition(10, vec, 0);
     CHECK(10 == *res);
 
-    res = vec.insert(vec.end(), 20);
+    const Type v20 = 20;
+    res = vec.insert(vec.end(), v20);
     CheckVector(2, vec);
 
     CheckValueAtPosition(10, vec, 0);
@@ -606,9 +708,10 @@ void TestInsertAtPosWithCref()
 }
 
 
+template <typename Type>
 void TestInsertAtPosWithRvalueRef()
 {
-    std::vector<int> vec;
+    std::vector<Type> vec;
 
     auto res = vec.insert(vec.begin(), std::move(10));
     CheckVector(1, vec);
@@ -624,9 +727,10 @@ void TestInsertAtPosWithRvalueRef()
     CHECK(20 == *res);
 }
 
+template <typename Type>
 void TestInsertAtPosWithCrefAndCount()
 {
-    std::vector<int> vec;
+    std::vector<Type> vec;
 
     auto res = vec.insert(vec.begin(), 5, 10);
     CheckVector(5, vec);
@@ -645,9 +749,10 @@ void TestInsertAtPosWithCrefAndCount()
     CHECK(vec.end() == res);
 }
 
+template <typename Type>
 void TestInsertAtPosWithRange()
 {
-    std::vector<int> vec;
+    std::vector<Type> vec;
 
     {
         int buf [] = {0, 1, 2, 3, 4, 5};
@@ -678,11 +783,11 @@ void TestInsertAtPosWithRange()
         CheckValueAtPosition(0, vec, 0);
         CheckValueAtPosition(1, vec, 1);
         CheckValueAtPosition(2, vec, 2);
-        CheckValueAtPosition(3, vec, 3);
-        CheckValueAtPosition(6, vec, 4);
-        CheckValueAtPosition(7, vec, 5);
-        CheckValueAtPosition(8, vec, 6);
-        CheckValueAtPosition(9, vec, 7);
+        CheckValueAtPosition(6, vec, 3);
+        CheckValueAtPosition(7, vec, 4);
+        CheckValueAtPosition(8, vec, 5);
+        CheckValueAtPosition(9, vec, 6);
+        CheckValueAtPosition(3, vec, 7);
         CheckValueAtPosition(4, vec, 8);
         CheckValueAtPosition(5, vec, 9);
 
@@ -691,24 +796,32 @@ void TestInsertAtPosWithRange()
 }
 
 
+template <typename Type>
 void TestInsert()
 {
-    TestInsertAtPosWithCref();
-    TestInsertAtPosWithRvalueRef();
-    TestInsertAtPosWithRange();
+    RUN_TEST(TestInsertAtPosWithCref<Type>());
+    RUN_TEST(TestInsertAtPosWithRvalueRef<Type>());
+    RUN_TEST(TestInsertAtPosWithRange<Type>());
+}
+
+template <typename Type>
+void VectorTestSuites()
+{
+    RUN_TEST_SUITE(TestVectorCtor<Type>());
+    RUN_TEST_SUITE(TestAssignmentOperator<Type>());
+    RUN_TEST_SUITE(TestAssignMethod<Type>());
+    RUN_TEST_SUITE(TestResize<Type>());
+    RUN_TEST_SUITE(TestReserve<Type>());
+    RUN_TEST_SUITE(TestErase<Type>());
+    RUN_TEST_SUITE(TestInsert<Type>());
 }
 
 int main()
 {
     try
     {
-        TestVectorCtor();
-        TestAssignmentOperator();
-        TestAssignMethod();
-        TestResize();
-        TestReserve();
-        TestErase();
-        TestInsert();
+        VectorTestSuites<ObjectWithGlobalRefCount>();
+        VectorTestSuites<int>();
     }
     catch(...)
     {

@@ -24,6 +24,7 @@ ForwardIterator rotate(ForwardIterator first, ForwardIterator n_first, ForwardIt
     {
         return first;
     }
+    ForwardIterator res = first + std::distance(n_first, last);
 
     ForwardIterator next = n_first;
     while (first != next)
@@ -39,8 +40,7 @@ ForwardIterator rotate(ForwardIterator first, ForwardIterator n_first, ForwardIt
         }
     }
 
-    throw "not implemented";
-    return first;
+    return res;
 }
 
 template <typename Type>

@@ -116,6 +116,8 @@ public:
     {
         if (&other != this)
         {
+            destroy_and_free(m_first, m_last, m_endOfCapacity, *this);
+
             static_cast<Allocator&>(*this) = std::move(static_cast<Allocator&&>(other));
             
             m_first = other.m_first;
@@ -159,8 +161,7 @@ public:
     //dtor
     ~vector()
     {
-        destroy_range(m_first, m_last, allocator_from(*this));
-        deallocate(m_first, m_endOfCapacity - m_first);
+        destroy_and_free(m_first, m_last, m_endOfCapacity, allocator_from(*this));
     }
 
 
@@ -299,8 +300,9 @@ public:
         if (count > size())
         {
             grow(count);
-            uninitialized_construct_with_allocator(m_last, m_last + count, allocator_from(*this));
-            m_last += count;
+            iterator newLast = m_first + count;
+            uninitialized_construct_with_allocator(m_last, newLast, allocator_from(*this));
+            m_last = newLast;
         }
         else if (count < size())
         {
@@ -313,8 +315,9 @@ public:
         if (count > size())
         {
             grow(count);
-            uninitialized_construct_with_allocator(m_last, m_last + count, allocator_from(*this), value);
-            m_last += count;
+            iterator newLast = m_first + count;
+            uninitialized_construct_with_allocator(m_last, newLast, allocator_from(*this), value);
+            m_last = newLast;
         }
         else if (count < size())
         {
@@ -337,8 +340,12 @@ public:
 
             try
             {
-                m_last = uninitialized_copy_with_allocator(make_move_iterator(m_first), make_move_iterator(m_last), newFirst, allocator_from(*this));
+                iterator newLast = uninitialized_copy_with_allocator(make_move_iterator(m_first), make_move_iterator(m_last), newFirst, allocator_from(*this));
+
+                destroy_and_free(m_first, m_last, m_endOfCapacity, *this);
+
                 m_first = newFirst;
+                m_last = newLast;
                 m_endOfCapacity = m_first + newCapacity;
             }
             catch (...)
@@ -362,33 +369,19 @@ public:
         destroy_range(newLast, m_last, allocator_from(*this));
         m_last = newLast;
 
-        return cast_from_const(last);
+        return cast_from_const(first);
     }
 
 
     //insert methods
     iterator insert(const_iterator pos, const Type& value)
     {
-        difference_type offset = pos - cbegin();
-
-        grow(size() + 1);
-        uninitialized_copy_with_allocator(std::addressof(value), std::addressof(value) + 1, m_last, allocator_from(*this));
-        m_last += 1;
-        rotate(m_first + offset, m_last - 1, m_last);
-
-        return m_first + offset;
+        return insert_with_perfect_fwd(pos, value);
     }
 
     iterator insert(const_iterator pos, Type&& value)
     {
-        difference_type offset = pos - cbegin();
-
-        grow(size() + 1);
-        uninitialized_construct_with_allocator(m_last, m_last + 1, allocator_from(*this), std::forward<Type>(value));
-        m_last += 1;
-        rotate(m_first + offset, m_last - 1, m_last);
-
-        return m_first + offset;
+        return insert_with_perfect_fwd(pos, std::forward<Type>(value));
     }
 
     iterator insert(const_iterator pos, size_type count, const Type& value)
@@ -404,7 +397,8 @@ public:
     }
 
     template <typename InputIterator>
-    typename enable_if<is_iterator<InputIterator>::value, iterator>::type insert(const_iterator pos, InputIterator first, InputIterator last)
+    typename enable_if<is_iterator<InputIterator>::value, iterator>::type
+    insert(const_iterator pos, InputIterator first, InputIterator last)
     {
         return insert_iterator_range(pos, first, last);
     }
@@ -427,12 +421,18 @@ private:
         vec.m_endOfCapacity = 0;
     }
 
+    static void destroy_and_free(iterator first, iterator last, iterator endOfCapacity, Allocator& alloc)
+    {
+        destroy_range(first, last, alloc);
+        alloc.deallocate(first, endOfCapacity - first);
+    }
+
     void grow(size_type desiredCapacity)
     {
         if (desiredCapacity > capacity())
         {
-            size_type exactCapacity = static_cast<size_type>(capacity() * 1.5);
-            exactCapacity = max(desiredCapacity, exactCapacity);
+            const size_type computedCapacity = static_cast<size_type>(capacity() * 1.5);
+            const size_type exactCapacity = max(desiredCapacity, computedCapacity);
             reserve(exactCapacity);
         }
     }
@@ -447,6 +447,18 @@ private:
         return vec;
     }
 
+    template <typename... Args>
+    iterator insert_with_perfect_fwd(const_iterator pos, Args&&... args)
+    {
+        difference_type offset = pos - cbegin();
+
+        grow(size() + 1);
+        uninitialized_construct_with_allocator(m_last, m_last + 1, allocator_from(*this), std::forward<Args>(args)...);
+        m_last += 1;
+        rotate(m_first + offset, m_last - 1, m_last);
+
+        return m_first + offset;
+    }
 
     template <typename InputIterator>
     typename std::enable_if<std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>::value, iterator>::type
