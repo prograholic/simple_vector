@@ -49,20 +49,20 @@ public:
     }
 
     vector(size_type count, const Type& value, const Allocator& alloc = Allocator())
-        : Allocator(alloc)
+        : vector(alloc)
     {
         resize(count, value);
     }
 
     explicit vector(size_type count, const Allocator& alloc = Allocator())
-        : Allocator(alloc)
+        : vector(alloc)
     {
         resize(count);
     }
 
     template <typename InputIterator>
     vector(InputIterator first, InputIterator last, const Allocator& alloc = Allocator())
-        : Allocator(alloc)
+        : vector(alloc)
     {
         assign(first, last);
     }
@@ -203,6 +203,41 @@ public:
     {
         return m_first[pos];
     }
+
+    //front methods
+    reference front()
+    {
+        return *m_first;
+    }
+
+    const_reference front() const
+    {
+        return *m_first;
+    }
+
+    //back methods
+    reference back()
+    {
+        return *(m_last - 1);
+    }
+
+    const_reference back() const
+    {
+        return *(m_last - 1);
+    }
+
+    //data methods
+    value_type* data()
+    {
+        return m_first;
+    }
+
+    const value_type* data() const
+    {
+        return m_first;
+    }
+
+
 
     //*begin methods
     
@@ -356,6 +391,22 @@ public:
         }
     }
 
+    //shrink_to_fit method
+    void shrink_to_fit()
+    {
+        vector tmp(std::move(*this)); // this become empty
+
+        *this = std::move(vector(std::make_move_iterator(tmp.begin()), std::make_move_iterator(tmp.end()), tmp.get_allocator()));
+    }
+
+
+    //clear method
+    void clear()
+    {
+        erase(m_first, m_last);
+    }
+
+
     //erase methods
     iterator erase(const_iterator pos)
     {
@@ -370,6 +421,13 @@ public:
         m_last = newLast;
 
         return cast_from_const(first);
+    }
+
+    //emplace method
+    template <typename... Args>
+    iterator emplace(const_iterator pos, Args&&... args)
+    {
+        return insert_with_perfect_fwd(pos, std::forward<Args>(args)...);
     }
 
 
@@ -406,6 +464,24 @@ public:
     iterator insert(const_iterator pos, std::initializer_list<Type> ilist)
     {
         return insert(pos, ilist.begin(), ilist.end());
+    }
+
+    //push_back methods
+    void push_back(const value_type& value)
+    {
+        insert(end(), value);
+    }
+
+    void push_back(value_type&& value)
+    {
+        insert(end(), std::forward<value_type>(value));
+    }
+
+    //emplace_back
+    template <typename... Args>
+    void emplace_back(Args&&... args)
+    {
+        insert(end(), std::forward<Args>(args)...);
     }
 
 private:

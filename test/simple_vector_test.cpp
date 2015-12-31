@@ -181,37 +181,61 @@ void TestCtorWithAllocator()
 template <typename Type>
 void TestCtorWithValueAndCount()
 {
-    std::vector<Type> vec(10, 42);
-    CheckVector(10, vec);
-
-    for (size_t pos = 0; pos != 10; ++pos)
     {
-        CheckValueAtPosition(42, vec, pos);
+        size_t count = 0;
+        Type value = 0;
+        std::vector<Type> vec(count, value);
+        CheckVector(0, vec);
+    }
+
+    {
+        std::vector<Type> vec(10, 42);
+        CheckVector(10, vec);
+
+        for (size_t pos = 0; pos != 10; ++pos)
+        {
+            CheckValueAtPosition(42, vec, pos);
+        }
     }
 }
 
 template <typename Type>
 void TestCtorWithCount()
 {
-    std::vector<Type> vec(10);
-    CheckVector(10, vec);
-
-    for (size_t pos = 0; pos != 10; ++pos)
     {
-        CheckValueAtPosition(0, vec, pos);
+        size_t count = 0;
+        std::vector<Type> vec(count);
+        CheckVector(0, vec);
+    }
+
+    {
+        std::vector<Type> vec(10);
+        CheckVector(10, vec);
+
+        for (size_t pos = 0; pos != 10; ++pos)
+        {
+            CheckValueAtPosition(0, vec, pos);
+        }
     }
 }
 
 template <typename Type>
 void TestCtorWithInputIterator()
 {
-    int buf[] = {0, 1, 2, 3, 4, 5};
-    std::vector<Type> vec(buf, buf + 6);
-    CheckVector(6, vec);
-
-    for (size_t pos = 0; pos != 6; ++pos)
     {
-        CheckValueAtPosition(static_cast<int>(pos), vec, pos);
+        int buf [] = {0, 1, 2, 3, 4, 5};
+        std::vector<Type> vec(buf, buf);
+        CheckVector(0, vec);
+    }
+    {
+        int buf [] = {0, 1, 2, 3, 4, 5};
+        std::vector<Type> vec(buf, buf + 6);
+        CheckVector(6, vec);
+
+        for (size_t pos = 0; pos != 6; ++pos)
+        {
+            CheckValueAtPosition(static_cast<int>(pos), vec, pos);
+        }
     }
 }
 
@@ -805,6 +829,89 @@ void TestInsert()
 }
 
 template <typename Type>
+void TestShrinkToFit()
+{
+    std::vector<Type> vec;
+
+    vec.shrink_to_fit();
+    CheckVector(0, vec);
+    CHECK(vec.size() == vec.capacity());
+
+    vec.resize(5);
+    vec.assign({0, 1, 2, 3, 4, 5});
+    CHECK(vec.capacity() > vec.size()); // test precondition, update test if error
+
+    vec.shrink_to_fit();
+    CheckVector(6, vec);
+    CHECK(vec.capacity() == vec.size());
+    for (size_t i = 0; i != 6; ++i)
+    {
+        CheckValueAtPosition(i, vec, i);
+    }
+}
+
+template <typename Type>
+void TestClear()
+{
+    std::vector<Type> vec;
+    size_t capacity = vec.capacity();
+    vec.clear();
+    CheckVector(0, vec);
+    CHECK(capacity == vec.capacity());
+
+    vec.resize(5);
+    CheckVector(5, vec);
+    capacity = vec.capacity();
+    vec.clear();
+    CheckVector(0, vec);
+    CHECK(capacity == vec.capacity());
+
+    capacity = vec.capacity();
+    vec.clear();
+    CheckVector(0, vec);
+    CHECK(capacity == vec.capacity());
+}
+
+template <typename Type>
+void TestPushBackCref()
+{
+    std::vector<Type> vec;
+
+    const Type v10 = 10;
+    vec.push_back(v10);
+    CheckVector(1, vec);
+    CheckValueAtPosition(10, vec, 0);
+
+    const Type v20 = 20;
+    vec.push_back(v20);
+    CheckVector(2, vec);
+    CheckValueAtPosition(10, vec, 0);
+    CheckValueAtPosition(20, vec, 1);
+}
+
+template <typename Type>
+void TestPushBackRvalueRef()
+{
+    std::vector<Type> vec;
+
+    vec.push_back(10);
+    CheckVector(1, vec);
+    CheckValueAtPosition(10, vec, 0);
+
+    vec.push_back(20);
+    CheckVector(2, vec);
+    CheckValueAtPosition(10, vec, 0);
+    CheckValueAtPosition(20, vec, 1);
+}
+
+template <typename Type>
+void TestPushBack()
+{
+    TestPushBackCref<Type>();
+    TestPushBackRvalueRef<Type>();
+}
+
+template <typename Type>
 void VectorTestSuites()
 {
     RUN_TEST_SUITE(TestVectorCtor<Type>());
@@ -814,6 +921,9 @@ void VectorTestSuites()
     RUN_TEST_SUITE(TestReserve<Type>());
     RUN_TEST_SUITE(TestErase<Type>());
     RUN_TEST_SUITE(TestInsert<Type>());
+    RUN_TEST_SUITE(TestShrinkToFit<Type>());
+    RUN_TEST_SUITE(TestClear<Type>());
+    RUN_TEST_SUITE(TestPushBack<Type>());
 }
 
 int main()
