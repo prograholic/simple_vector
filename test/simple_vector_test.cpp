@@ -912,6 +912,12 @@ void TestPushBack()
 }
 
 template <typename Type>
+void CompileTimeTests()
+{
+    typedef typename std::vector<Type>::allocator_type my_alloc;
+}
+
+template <typename Type>
 void VectorTestSuites()
 {
     RUN_TEST_SUITE(TestVectorCtor<Type>());
@@ -924,6 +930,7 @@ void VectorTestSuites()
     RUN_TEST_SUITE(TestShrinkToFit<Type>());
     RUN_TEST_SUITE(TestClear<Type>());
     RUN_TEST_SUITE(TestPushBack<Type>());
+    RUN_TEST_SUITE(CompileTimeTests<Type>());
 }
 
 int main()

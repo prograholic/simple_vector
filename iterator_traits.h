@@ -59,4 +59,11 @@ struct is_iterator<Type *> : true_type
 {
 };
 
+#if 0
+template <typename Type>
+struct is_iterator<const Type *>: true_type
+{
+};
+#endif //90
+
 }

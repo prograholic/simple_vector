@@ -14,10 +14,9 @@
 namespace std
 {
 
-template <typename Type, typename Allocator = allocator<Type>>
-class vector : private Allocator // EBCO friendly
+template <typename Type, typename Allocator>
+struct vector_base : private Allocator // EBCO friendly
 {
-public:
     typedef Type* iterator;
     typedef const Type* const_iterator;
 
@@ -34,13 +33,16 @@ public:
 
     typedef Allocator allocator_type;
 
-    // ctor
-    vector()
-        : vector(Allocator())
+    iterator m_first;
+    iterator m_last;
+    iterator m_endOfCapacity;
+
+    vector_base()
+        : vector_base(Allocator())
     {
     }
 
-    explicit vector(const Allocator& alloc)
+    vector_base(const Allocator& alloc)
         : Allocator(alloc)
         , m_first()
         , m_last()
@@ -48,21 +50,132 @@ public:
     {
     }
 
+    vector_base(vector_base&& other)
+        : Allocator(std::move(static_cast<Allocator&&>(other)))
+        , m_first(std::move(other.m_first))
+        , m_last(std::move(other.m_last))
+        , m_endOfCapacity(std::move(other.m_endOfCapacity))
+    {
+        tidy(other);
+    }
+
+    vector_base(vector_base&& other, const Allocator& alloc)
+        : Allocator(alloc)
+        , m_first(std::move(other.m_first))
+        , m_last(std::move(other.m_last))
+        , m_endOfCapacity(std::move(other.m_endOfCapacity))
+    {
+        tidy(other);
+    }
+
+
+    vector_base& operator=(vector_base&& other)
+    {
+        if (&other != this)
+        {
+            destroy_and_free(m_first, m_last, m_endOfCapacity, allocator_from(*this));
+
+            static_cast<Allocator&>(*this) = std::move(static_cast<Allocator&&>(other));
+
+            m_first = other.m_first;
+            m_last = other.m_last;
+            m_endOfCapacity = other.m_endOfCapacity;
+
+            tidy(other);
+        }
+
+        return *this;
+    }
+
+    ~vector_base()
+    {
+        destroy_and_free(m_first, m_last, m_endOfCapacity, allocator_from(*this));
+    }
+
+
+    using Allocator::allocate;
+    using Allocator::deallocate;
+
+
+    static void tidy(vector_base& vec)
+    {
+        vec.m_first = 0;
+        vec.m_last = 0;
+        vec.m_endOfCapacity = 0;
+    }
+
+    static void destroy_and_free(iterator first, iterator last, iterator endOfCapacity, Allocator& alloc)
+    {
+        destroy_range(first, last, alloc);
+        alloc.deallocate(first, endOfCapacity - first);
+    }
+
+    static iterator cast_from_const(const_iterator pos)
+    {
+        return const_cast<iterator>(pos);
+    }
+
+    static allocator_type& allocator_from(vector_base& vec)
+    {
+        return vec;
+    }
+
+    static const allocator_type& allocator_from(const vector_base& vec)
+    {
+        return vec;
+    }
+};
+
+template <typename Type, typename Allocator = allocator<Type>>
+class vector : private vector_base<Type, Allocator> // EBCO friendly
+{
+public:
+
+    typedef vector_base<Type, Allocator> base_type;
+
+    using typename base_type::iterator;
+    using typename base_type::const_iterator;
+
+    using typename base_type::value_type;
+
+    using typename base_type::reference;
+    using typename base_type::const_reference;
+
+    using typename base_type::reverse_iterator;
+    using typename base_type::const_reverse_iterator;
+
+    using typename base_type::size_type;
+    using typename base_type::difference_type;
+
+    // BUG? cannot use `using` for allocator_type
+    typedef typename base_type::allocator_type allocator_type;
+
+    // ctor
+    vector()
+        : vector_base()
+    {
+    }
+
+    explicit vector(const Allocator& alloc)
+        : vector_base(alloc)
+    {
+    }
+
     vector(size_type count, const Type& value, const Allocator& alloc = Allocator())
-        : vector(alloc)
+        : vector_base(alloc)
     {
         resize(count, value);
     }
 
     explicit vector(size_type count, const Allocator& alloc = Allocator())
-        : vector(alloc)
+        : vector_base(alloc)
     {
         resize(count);
     }
 
     template <typename InputIterator>
     vector(InputIterator first, InputIterator last, const Allocator& alloc = Allocator())
-        : vector(alloc)
+        : vector_base(alloc)
     {
         assign(first, last);
     }
@@ -78,21 +191,13 @@ public:
     }
 
     vector(vector&& other)
-        : Allocator(std::move(static_cast<Allocator&&>(other)))
-        , m_first(std::move(other.m_first))
-        , m_last(std::move(other.m_last))
-        , m_endOfCapacity(std::move(other.m_endOfCapacity))
+        : vector_base(std::forward<vector_base>(other))
     {
-        tidy(other);
     }
 
     vector(vector&& other, const Allocator& alloc)
-        : Allocator(alloc)
-        , m_first(std::move(other.m_first))
-        , m_last(std::move(other.m_last))
-        , m_endOfCapacity(std::move(other.m_endOfCapacity))
+        : vector_base(std::forward<vector_base>(other), alloc)
     {
-        tidy(other);
     }
 
     vector(std::initializer_list<Type> init, const Allocator& alloc = Allocator())
@@ -105,7 +210,7 @@ public:
     {
         if (&other != this)
         {
-            static_cast<Allocator&>(*this) = static_cast<const Allocator&>(other);
+            allocator_from(*this) = allocator_from(other);
             assign(other.begin(), other.end());
         }
 
@@ -114,18 +219,7 @@ public:
 
     vector& operator=(vector&& other)
     {
-        if (&other != this)
-        {
-            destroy_and_free(m_first, m_last, m_endOfCapacity, *this);
-
-            static_cast<Allocator&>(*this) = std::move(static_cast<Allocator&&>(other));
-            
-            m_first = other.m_first;
-            m_last = other.m_last;
-            m_endOfCapacity = other.m_endOfCapacity;
-
-            tidy(other);
-        }
+        static_cast<vector_base&>(*this) = std::move(static_cast<vector_base&&>(other));
 
         return *this;
     }
@@ -161,14 +255,13 @@ public:
     //dtor
     ~vector()
     {
-        destroy_and_free(m_first, m_last, m_endOfCapacity, allocator_from(*this));
     }
 
 
     //get_allocator method
     allocator_type get_allocator() const
     {
-        return *this;
+        return allocator_from(*this);
     }
 
 
@@ -377,7 +470,7 @@ public:
             {
                 iterator newLast = uninitialized_copy_with_allocator(make_move_iterator(m_first), make_move_iterator(m_last), newFirst, allocator_from(*this));
 
-                destroy_and_free(m_first, m_last, m_endOfCapacity, *this);
+                destroy_and_free(m_first, m_last, m_endOfCapacity, allocator_from(*this));
 
                 m_first = newFirst;
                 m_last = newLast;
@@ -485,23 +578,6 @@ public:
     }
 
 private:
-    iterator m_first;
-    iterator m_last;
-    iterator m_endOfCapacity;
-
-
-    static void tidy(vector& vec)
-    {
-        vec.m_first = 0;
-        vec.m_last = 0;
-        vec.m_endOfCapacity = 0;
-    }
-
-    static void destroy_and_free(iterator first, iterator last, iterator endOfCapacity, Allocator& alloc)
-    {
-        destroy_range(first, last, alloc);
-        alloc.deallocate(first, endOfCapacity - first);
-    }
 
     void grow(size_type desiredCapacity)
     {
@@ -511,16 +587,6 @@ private:
             const size_type exactCapacity = max(desiredCapacity, computedCapacity);
             reserve(exactCapacity);
         }
-    }
-
-    static iterator cast_from_const(const_iterator pos)
-    {
-        return const_cast<iterator>(pos);
-    }
-
-    static allocator_type& allocator_from(vector& vec)
-    {
-        return vec;
     }
 
     template <typename... Args>
@@ -538,14 +604,14 @@ private:
 
     template <typename InputIterator>
     typename std::enable_if<std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>::value, iterator>::type
-    insert_iterator_range(const_iterator pos, InputIterator first, InputIterator last)
+        insert_iterator_range(const_iterator pos, InputIterator first, InputIterator last)
     {
         difference_type offset = pos - cbegin();
         difference_type count = std::distance(first, last);
 
         grow(size() + count);
         uninitialized_copy_with_allocator(first, last, m_last, allocator_from(*this));
-        
+
         m_last += count;
         rotate(m_first + offset, m_last - count, m_last);
 

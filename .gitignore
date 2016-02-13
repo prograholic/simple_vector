@@ -81,3 +81,8 @@ $RECYCLE.BIN/
 
 # Windows solution
 simple_vector_sln
+simple_vector/Debug
+simple_vector/Release
+simple_vector/*.opendb
+simple_vector/*.sdf
+simple_vector/.vs
