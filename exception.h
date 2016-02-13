@@ -10,7 +10,7 @@ public:
     {
     }
 
-    exception(const exception& other)
+    exception(const exception& /* other */)
     {
     }
 

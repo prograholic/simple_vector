@@ -23,6 +23,7 @@ struct allocator
     template <typename OtherType>
     void destroy(OtherType* p)
     {
+        (void) p;
         p->~OtherType();
     }
 

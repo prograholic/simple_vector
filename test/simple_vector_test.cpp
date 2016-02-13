@@ -1,6 +1,12 @@
 #include <vector.h>
 
-#include <stdio.h>
+//#include <stdio.h>
+extern "C"
+{
+
+int __cdecl my_printf(char const* const format, ...);
+
+}
 
 #define STR(x) #x
 #define STR2(x) STR(x)
@@ -77,8 +83,8 @@ inline bool operator==(int left, const ObjectWithGlobalRefCount& right)
 size_t ObjectWithGlobalRefCount::objectCount = 0;
 
 
-#define RUN_TEST(test) do {printf("running test %s...", STR(test)); test; CHECK((0 == ObjectWithGlobalRefCount::objectCount) && STR(test) " failed"); printf(" done\n");} while(0)
-#define RUN_TEST_SUITE(test) do {printf("running test suite %s...\n", STR(test)); test; printf("done\n\n");} while(0)
+#define RUN_TEST(test) do {my_printf("running test %s...", STR(test)); test; CHECK((0 == ObjectWithGlobalRefCount::objectCount) && STR(test) " failed"); my_printf(" done\n");} while(0)
+#define RUN_TEST_SUITE(test) do {my_printf("running test suite %s...\n", STR(test)); test; my_printf("done\n\n");} while(0)
 
 int ProcessException()
 {
@@ -88,16 +94,16 @@ int ProcessException()
     }
     catch (const char* msg)
     {
-        printf("%s\n", msg);
+        my_printf("%s\n", msg);
         return 1;
     }
     catch (...)
     {
-        printf("UNKNOWN ERROR!!!\n");
+        my_printf("UNKNOWN ERROR!!!\n");
         return 2;
     }
 
-    printf("EXPECTED EXCEPTION!!!\n");
+    my_printf("EXPECTED EXCEPTION!!!\n");
     return 3;
 }
 
