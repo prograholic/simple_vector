@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits.h>
+#include <pointer_traits.h>
 
 namespace std
 {
@@ -15,52 +16,43 @@ struct wrap_int
     }
 };
 
-template <typename Type>
-struct identity
-{
-    typedef Type type;
-};
-
 template <typename Allocator>
 struct get_pointer
 {
     template <typename Alloc2>
-    static auto deduce_type(int) -> identity<typename Alloc2::pointer>;
+    static auto select_type(int)->typename Alloc2::pointer;
 
     template <typename Alloc2>
-    static auto deduce_type(wrap_int) -> identity<typename Allocator::value_type*>;
-    
-    typedef decltype(deduce_type<Allocator>(0)) deduced_identity_type;
+    static auto select_type(wrap_int)->typename Allocator::value_type*;
 
-    typedef typename deduced_identity_type::type type;
+    typedef decltype(select_type<Allocator>(0)) type;
 };
 
 template <typename Allocator>
 struct get_const_pointer
 {
     template <typename Alloc2>
-    static auto deduce_type(int)->identity<typename Alloc2::const_pointer>;
+    static auto select_type(int)->typename Alloc2::const_pointer;
+
+    typedef pointer_traits<typename get_pointer<Allocator>::type> pointer_trait_type;
+    typedef typename pointer_trait_type::template rebind<const typename Allocator::value_type> other_const_pointer_type;
 
     template <typename Alloc2>
-    static auto deduce_type(wrap_int)->identity<typename const Allocator::value_type*>;
+    static auto select_type(wrap_int)->other_const_pointer_type;
 
-    typedef decltype(deduce_type<Allocator>(0)) deduced_identity_type;
-
-    typedef typename deduced_identity_type::type type;
+    typedef decltype(select_type<Allocator>(0)) type;
 };
 
 template <typename Allocator>
 struct get_size_type
 {
     template <typename Alloc2>
-    static auto deduce_type(int)->identity<typename Alloc2::size_type>;
+    static auto select_type(int)->typename Alloc2::size_type;
 
     template <typename Alloc2>
-    static auto deduce_type(wrap_int)->identity<size_t>;
+    static auto select_type(wrap_int)->size_t;
 
-    typedef decltype(deduce_type<Allocator>(0)) deduced_identity_type;
-
-    typedef typename deduced_identity_type::type type;
+    typedef decltype(select_type<Allocator>(0)) type;
 };
 
 
@@ -125,7 +117,12 @@ struct allocator_traits
 
     typedef typename detail::get_size_type<Allocator>::type size_type;
 
-
+    // ...
+    typedef false_type propagate_on_container_copy_assignment;
+    typedef false_type propagate_on_container_move_assignment;
+    typedef false_type propagate_on_container_swap;
+    
+    typedef true_type  is_always_equal;
 
     static pointer allocate(Allocator& a, size_type n, const void* hint = 0)
     {

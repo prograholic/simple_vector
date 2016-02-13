@@ -921,6 +921,8 @@ template <typename Type>
 void CompileTimeTests()
 {
     typedef typename std::vector<Type>::allocator_type my_alloc;
+
+    static_assert(std::is_same<typename std::vector<Type>::pointer, Type*>::value, "incorrect pointer type");
 }
 
 template <typename Type>

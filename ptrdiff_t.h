@@ -1,9 +1,12 @@
 #pragma once
 
+#include <type_traits.h>
+
 namespace std
 {
 
-typedef int ptrdiff_t; // FIXME: x86 MSVC specific
-static_assert(sizeof(ptrdiff_t) == sizeof(size_t), "incorrect ptrdiff_t declaration");
+typedef decltype(declval<char*>() - declval<char*>()) ptrdiff_t;
+
+static_assert(is_same<make_unsigned<ptrdiff_t>::type, size_t>::value, "incorrect ptrdiff_t declaration");
 
 }

@@ -166,6 +166,7 @@
     <ClInclude Include="..\addressof.h" />
     <ClInclude Include="..\algorithm.h" />
     <ClInclude Include="..\allocator.h" />
+    <ClInclude Include="..\allocator_traits.h" />
     <ClInclude Include="..\exception.h" />
     <ClInclude Include="..\forward.h" />
     <ClInclude Include="..\initializer_list.h" />
@@ -175,13 +176,13 @@
     <ClInclude Include="..\move_iterator.h" />
     <ClInclude Include="..\new.h" />
     <ClInclude Include="..\numeric_limits.h" />
+    <ClInclude Include="..\pointer_traits.h" />
     <ClInclude Include="..\ptrdiff_t.h" />
     <ClInclude Include="..\reverse_iterator.h" />
     <ClInclude Include="..\swap.h" />
     <ClInclude Include="..\type_traits.h" />
     <ClInclude Include="..\uninitialized.h" />
     <ClInclude Include="..\vector.h" />
-    <ClInclude Include="allocator_traits.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
