@@ -2,6 +2,7 @@
 
 #include <move.h>
 #include <allocator.h>
+#include <allocator_traits.h>
 #include <initializer_list.h>
 #include <reverse_iterator.h>
 #include <uninitialized.h>
@@ -17,10 +18,17 @@ namespace std
 template <typename Type, typename Allocator>
 struct vector_base : private Allocator // EBCO friendly
 {
+    typedef Allocator allocator_type;
+
+    typedef allocator_traits<allocator_type> vector_allocator_traits;
+
+
     typedef Type* iterator;
     typedef const Type* const_iterator;
 
     typedef Type value_type;
+    typedef typename vector_allocator_traits::pointer pointer;
+    typedef typename vector_allocator_traits::const_pointer const_pointer;
 
     typedef value_type& reference;
     typedef const value_type& const_reference;
@@ -28,10 +36,9 @@ struct vector_base : private Allocator // EBCO friendly
     typedef std::reverse_iterator<iterator> reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-    typedef size_t size_type;
+    typedef typename vector_allocator_traits::size_type size_type;
     typedef ptrdiff_t difference_type;
 
-    typedef Allocator allocator_type;
 
     iterator m_first;
     iterator m_last;
@@ -93,8 +100,16 @@ struct vector_base : private Allocator // EBCO friendly
     }
 
 
-    using Allocator::allocate;
-    using Allocator::deallocate;
+    static pointer alloc(Allocator& alloc, size_type n)
+    {
+        return vector_allocator_traits::allocate(alloc, n);
+    }
+
+    static void dealloc(Allocator& alloc, pointer p, size_type n)
+    {
+        vector_allocator_traits::deallocate(alloc, p, n);
+    }
+
 
 
     static void tidy(vector_base& vec)
@@ -107,7 +122,7 @@ struct vector_base : private Allocator // EBCO friendly
     static void destroy_and_free(iterator first, iterator last, iterator endOfCapacity, Allocator& alloc)
     {
         destroy_range(first, last, alloc);
-        alloc.deallocate(first, endOfCapacity - first);
+        dealloc(alloc, first, endOfCapacity - first);
     }
 
     static iterator cast_from_const(const_iterator pos)
@@ -137,6 +152,8 @@ public:
     using typename base_type::const_iterator;
 
     using typename base_type::value_type;
+    using typename base_type::pointer;
+    using typename base_type::const_pointer;
 
     using typename base_type::reference;
     using typename base_type::const_reference;
@@ -181,7 +198,9 @@ public:
     }
 
     vector(const vector& other)
-        : vector(other.cbegin(), other.cend(), other.get_allocator()) // actually should use std::allocator_traits<Allocator>::select_on_container_copy_construction(other.get_allocator())
+        : vector(other.cbegin(),
+                 other.cend(),
+                 allocator_traits<Allocator>::select_on_container_copy_construction(other.get_allocator()))
     {
     }
 
@@ -464,7 +483,7 @@ public:
 
         if (newCapacity > capacity())
         {
-            iterator newFirst = allocate(newCapacity);
+            iterator newFirst = alloc(allocator_from(*this), newCapacity);
 
             try
             {
@@ -478,7 +497,7 @@ public:
             }
             catch (...)
             {
-                deallocate(newFirst, newCapacity);
+                dealloc(allocator_from(*this), newFirst, newCapacity);
                 throw;
             }
         }

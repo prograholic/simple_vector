@@ -2,6 +2,7 @@
 
 #include <iterator_traits.h>
 #include <addressof.h>
+#include <allocator_traits.h>
 
 namespace std
 {
@@ -12,7 +13,7 @@ void destroy_range(ForwardIterator first, ForwardIterator last, Allocator& alloc
     typedef typename std::iterator_traits<ForwardIterator>::value_type value_type;
     while (first != last)
     {
-        alloc.destroy(first);
+        allocator_traits<Allocator>::destroy(alloc, first);
         ++first;
     }
 }
@@ -25,7 +26,7 @@ void uninitialized_construct_with_allocator(ForwardIterator first, ForwardIterat
     {
         for (; current != last; ++current)
         {
-            alloc.construct(std::addressof(*current), std::forward<Args>(args)...);
+            allocator_traits<Allocator>::construct(alloc, addressof(*current), forward<Args>(args)...);
         }
     }
     catch (...)
@@ -45,7 +46,7 @@ ForwardIterator uninitialized_copy_with_allocator(InputIterator first, InputIter
     {
         for (; first != last; ++current, ++first)
         {
-            alloc.construct(std::addressof(*current), *first);
+            allocator_traits<Allocator>::construct(alloc, addressof(*current), *first);
         }
 
         return current;
@@ -66,7 +67,7 @@ ForwardIterator uninitialized_copy_with_allocator_n(const Type& value, Size n, F
     {
         for (; n > 0; ++current, --n)
         {
-            alloc.construct(std::addressof(*current), value);
+            allocator_traits<Allocator>::construct(alloc, addressof(*current), value);
         }
 
         return current;

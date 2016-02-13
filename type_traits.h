@@ -9,6 +9,10 @@ struct param_tester
     typedef void type;
 };
 
+
+template <typename ... Args>
+using void_t = typename param_tester<Args...>::type;
+
 template <typename Type, Type Value>
 struct integral_constant
 {
