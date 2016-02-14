@@ -160,6 +160,7 @@
       <IgnoreStandardIncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IgnoreStandardIncludePath>
       <IgnoreStandardIncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</IgnoreStandardIncludePath>
     </ClCompile>
+    <ClCompile Include="msvc_stl.cpp" />
     <ClCompile Include="my_printf.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -121,8 +121,6 @@ struct allocator_traits
     typedef false_type propagate_on_container_copy_assignment;
     typedef false_type propagate_on_container_move_assignment;
     typedef false_type propagate_on_container_swap;
-    
-    typedef true_type  is_always_equal;
 
     static pointer allocate(Allocator& a, size_type n, const void* hint = 0)
     {

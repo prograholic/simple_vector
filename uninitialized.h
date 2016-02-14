@@ -6,11 +6,12 @@
 
 namespace std
 {
+namespace detail
+{
 
 template <typename ForwardIterator, typename Allocator>
 void destroy_range(ForwardIterator first, ForwardIterator last, Allocator& alloc)
 {
-    typedef typename std::iterator_traits<ForwardIterator>::value_type value_type;
     while (first != last)
     {
         allocator_traits<Allocator>::destroy(alloc, first);
@@ -19,7 +20,7 @@ void destroy_range(ForwardIterator first, ForwardIterator last, Allocator& alloc
 }
 
 template<typename ForwardIterator, typename Allocator, typename ... Args>
-void uninitialized_construct_with_allocator(ForwardIterator first, ForwardIterator last, Allocator& alloc, Args&&... args)
+void uninitialized_construct_a(ForwardIterator first, ForwardIterator last, Allocator& alloc, Args&&... args)
 {
     ForwardIterator current = first;
     try
@@ -37,10 +38,8 @@ void uninitialized_construct_with_allocator(ForwardIterator first, ForwardIterat
 }
 
 template<typename InputIterator, typename ForwardIterator, typename Allocator>
-ForwardIterator uninitialized_copy_with_allocator(InputIterator first, InputIterator last, ForwardIterator dest, Allocator& alloc)
+ForwardIterator uninitialized_copy_a(InputIterator first, InputIterator last, ForwardIterator dest, Allocator& alloc)
 {
-    typedef typename std::iterator_traits<InputIterator>::value_type input_value_type;
-    typedef typename std::iterator_traits<ForwardIterator>::value_type value_type;
     ForwardIterator current = dest;
     try
     {
@@ -59,9 +58,8 @@ ForwardIterator uninitialized_copy_with_allocator(InputIterator first, InputIter
 }
 
 template<typename Type, typename Size, typename ForwardIterator, typename Allocator>
-ForwardIterator uninitialized_copy_with_allocator_n(const Type& value, Size n, ForwardIterator dest, Allocator& alloc) // note semantics differs from uninitialized_copy_n
+ForwardIterator uninitialized_fill_n_a(ForwardIterator dest, Size n, const Type& value, Allocator& alloc)
 {
-    typedef typename std::iterator_traits<ForwardIterator>::value_type value_type;
     ForwardIterator current = dest;
     try
     {
@@ -79,4 +77,5 @@ ForwardIterator uninitialized_copy_with_allocator_n(const Type& value, Size n, F
     }
 }
 
-}
+} // namespace detail
+} // namespace std

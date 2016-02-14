@@ -51,45 +51,40 @@ struct vector_base : private Allocator // EBCO friendly
 
     vector_base(const Allocator& alloc)
         : Allocator(alloc)
-        , m_first()
-        , m_last()
-        , m_endOfCapacity()
     {
+        tidy(*this);
     }
 
     vector_base(vector_base&& other)
         : Allocator(std::move(static_cast<Allocator&&>(other)))
-        , m_first(std::move(other.m_first))
-        , m_last(std::move(other.m_last))
-        , m_endOfCapacity(std::move(other.m_endOfCapacity))
     {
+        swap_base(*this, static_cast<vector_base&>(other));
         tidy(other);
     }
 
     vector_base(vector_base&& other, const Allocator& alloc)
         : Allocator(alloc)
-        , m_first(std::move(other.m_first))
-        , m_last(std::move(other.m_last))
-        , m_endOfCapacity(std::move(other.m_endOfCapacity))
     {
+        swap_base(*this, static_cast<vector_base&>(other));
         tidy(other);
     }
 
 
     vector_base& operator=(vector_base&& other)
     {
-        if (&other != this)
-        {
-            destroy_and_free(m_first, m_last, m_endOfCapacity, allocator_from(*this));
+        destroy_and_free(m_first, m_last, m_endOfCapacity, allocator_from(*this));
 
-            static_cast<Allocator&>(*this) = std::move(static_cast<Allocator&&>(other));
+        propagate_on_move_assignment(static_cast<Allocator&&>(other));
 
-            m_first = other.m_first;
-            m_last = other.m_last;
-            m_endOfCapacity = other.m_endOfCapacity;
+        swap_base(*this, static_cast<vector_base&>(other));
+        tidy(other);
 
-            tidy(other);
-        }
+        return *this;
+    }
+
+    vector_base& operator=(const vector_base& other)
+    {
+        propagate_on_copy_assignment(static_cast<const Allocator&>(other));
 
         return *this;
     }
@@ -119,9 +114,16 @@ struct vector_base : private Allocator // EBCO friendly
         vec.m_endOfCapacity = 0;
     }
 
+    static void swap_base(vector_base& left, vector_base& right)
+    {
+        swap(left.m_first, right.m_first);
+        swap(left.m_last, right.m_last);
+        swap(left.m_endOfCapacity, right.m_endOfCapacity);
+    }
+
     static void destroy_and_free(iterator first, iterator last, iterator endOfCapacity, Allocator& alloc)
     {
-        destroy_range(first, last, alloc);
+        detail::destroy_range(first, last, alloc);
         dealloc(alloc, first, endOfCapacity - first);
     }
 
@@ -138,6 +140,40 @@ struct vector_base : private Allocator // EBCO friendly
     static const allocator_type& allocator_from(const vector_base& vec)
     {
         return vec;
+    }
+
+private:
+
+    static void propagate_on_move_assignment(Allocator&& other, true_type)
+    {
+        static_cast<Allocator&>(*this) = std::move(other);
+    }
+
+    static void propagate_on_move_assignment(Allocator&& /* other */, false_type)
+    {
+        // does nothing
+    }
+    
+    static void propagate_on_move_assignment(Allocator&& other)
+    {
+        typedef vector_allocator_traits::propagate_on_container_move_assignment tag;
+        propagate_on_move_assignment(forward<Allocator>(other), tag());
+    }
+
+    static void propagate_on_copy_assignment(const Allocator& other, true_type)
+    {
+        static_cast<Allocator&>(*this) = alloc;
+    }
+
+    static void propagate_on_copy_assignment(const Allocator& /* other */, false_type)
+    {
+        // does nothing
+    }
+
+    static void propagate_on_copy_assignment(const Allocator& other)
+    {
+        typedef vector_allocator_traits::propagate_on_container_copy_assignment tag;
+        propagate_on_copy_assignment(other, tag());
     }
 };
 
@@ -229,7 +265,8 @@ public:
     {
         if (&other != this)
         {
-            allocator_from(*this) = allocator_from(other);
+            static_cast<vector_base&>(*this) = static_cast<const vector_base&>(other);
+
             assign(other.begin(), other.end());
         }
 
@@ -238,7 +275,10 @@ public:
 
     vector& operator=(vector&& other)
     {
-        static_cast<vector_base&>(*this) = std::move(static_cast<vector_base&&>(other));
+        if (&other != this)
+        {
+            static_cast<vector_base&>(*this) = std::move(static_cast<vector_base&&>(other));
+        }
 
         return *this;
     }
@@ -448,7 +488,7 @@ public:
         {
             grow(count);
             iterator newLast = m_first + count;
-            uninitialized_construct_with_allocator(m_last, newLast, allocator_from(*this));
+            detail::uninitialized_construct_a(m_last, newLast, allocator_from(*this));
             m_last = newLast;
         }
         else if (count < size())
@@ -463,7 +503,7 @@ public:
         {
             grow(count);
             iterator newLast = m_first + count;
-            uninitialized_construct_with_allocator(m_last, newLast, allocator_from(*this), value);
+            detail::uninitialized_construct_a(m_last, newLast, allocator_from(*this), value);
             m_last = newLast;
         }
         else if (count < size())
@@ -487,13 +527,7 @@ public:
 
             try
             {
-                iterator newLast = uninitialized_copy_with_allocator(make_move_iterator(m_first), make_move_iterator(m_last), newFirst, allocator_from(*this));
-
-                destroy_and_free(m_first, m_last, m_endOfCapacity, allocator_from(*this));
-
-                m_first = newFirst;
-                m_last = newLast;
-                m_endOfCapacity = m_first + newCapacity;
+                relocate(newFirst, newCapacity);
             }
             catch (...)
             {
@@ -529,7 +563,7 @@ public:
     {
         iterator newLast = rotate(cast_from_const(first), cast_from_const(last), m_last);
 
-        destroy_range(newLast, m_last, allocator_from(*this));
+        detail::destroy_range(newLast, m_last, allocator_from(*this));
         m_last = newLast;
 
         return cast_from_const(first);
@@ -559,7 +593,7 @@ public:
         difference_type offset = pos - cbegin();
 
         grow(size() + count);
-        uninitialized_copy_with_allocator_n(value, count, m_last, allocator_from(*this));
+        detail::uninitialized_fill_n_a(m_last, count, value, allocator_from(*this));
         m_last += count;
         rotate(m_first + offset, m_last - count, m_last);
 
@@ -608,13 +642,24 @@ private:
         }
     }
 
+    void relocate(iterator newFirst, size_type newCapacity)
+    {
+        iterator newLast = detail::uninitialized_copy_a(make_move_iterator(m_first), make_move_iterator(m_last), newFirst, allocator_from(*this));
+
+        destroy_and_free(m_first, m_last, m_endOfCapacity, allocator_from(*this));
+
+        m_first = newFirst;
+        m_last = newLast;
+        m_endOfCapacity = m_first + newCapacity;
+    }
+
     template <typename... Args>
     iterator insert_with_perfect_fwd(const_iterator pos, Args&&... args)
     {
         difference_type offset = pos - cbegin();
 
         grow(size() + 1);
-        uninitialized_construct_with_allocator(m_last, m_last + 1, allocator_from(*this), std::forward<Args>(args)...);
+        detail::uninitialized_construct_a(m_last, m_last + 1, allocator_from(*this), std::forward<Args>(args)...);
         m_last += 1;
         rotate(m_first + offset, m_last - 1, m_last);
 
@@ -629,7 +674,7 @@ private:
         difference_type count = std::distance(first, last);
 
         grow(size() + count);
-        uninitialized_copy_with_allocator(first, last, m_last, allocator_from(*this));
+        detail::uninitialized_copy_a(first, last, m_last, allocator_from(*this));
 
         m_last += count;
         rotate(m_first + offset, m_last - count, m_last);
