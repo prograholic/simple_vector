@@ -604,7 +604,7 @@ public:
     typename enable_if<is_iterator<InputIterator>::value, iterator>::type
     insert(const_iterator pos, InputIterator first, InputIterator last)
     {
-        return insert_iterator_range(pos, first, last);
+        return insert_range(pos, first, last);
     }
 
     iterator insert(const_iterator pos, std::initializer_list<Type> ilist)
@@ -668,7 +668,7 @@ private:
 
     template <typename InputIterator>
     typename std::enable_if<std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>::value, iterator>::type
-        insert_iterator_range(const_iterator pos, InputIterator first, InputIterator last)
+    insert_range(const_iterator pos, InputIterator first, InputIterator last)
     {
         difference_type offset = pos - cbegin();
         difference_type count = std::distance(first, last);

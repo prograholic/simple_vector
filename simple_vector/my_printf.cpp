@@ -288,4 +288,22 @@ namespace std2 {
         }
     }
 #endif //0
+
+
+    template <typename Type>
+    struct counting_iterator {
+        size_t m_count;
+        Type* m_value;
+
+        typedef Type& reference;
+
+        counting_iterator& operator++() {
+            --m_count;
+            return *this;
+        }
+
+        reference operator*() {
+            return *m_value;
+        }
+    };
 }
